@@ -6,6 +6,8 @@
 
 #include <array>
 #include <functional>
+#include <iostream> // FIXME: remove
+#include <cassert> // FIXME: remove
 
 #include "SoundplaneModelA.h"
 #include "SensorFrame.h"
@@ -41,6 +43,7 @@ class Unpacker
 		void push_back(T value)
 		{
 			mData[mIdx] = value;
+			assert(mSize + 1 < Capacity); // FIXME: remove when working
 			mSize = std::min(Capacity, mSize + 1);
 			mIdx = (mIdx + 1) % Capacity;
 		}
@@ -111,6 +114,10 @@ public:
 	 */
 	void gotTransfer(int endpoint, SoundplaneADataPacket* packets, int numPackets)
 	{
+		assert(numPackets != 0);
+		if (numPackets == 0) {
+			std::cerr << "Unpacker::gotTransfer() numPackets == 0\n";
+		}
 		mTransfers[endpoint].push_back(Transfer(endpoint, packets, numPackets));
 
 		Transfer* ts[2] = { getOldestTransfer(0), getOldestTransfer(1) };
@@ -131,6 +138,7 @@ public:
 				// the oldest for the other. In this case we discard the older
 				// packet.
 				int olderTransferEndpoint = lessThanHandleOverflow(p0.seqNum, p1.seqNum) ? 0 : 1;
+				// std::cerr << "UNPACKER, dumping ep " << olderTransferEndpoint << " packets\n";
 				popPacket(&ts[olderTransferEndpoint]);
 			}
 		}

@@ -156,7 +156,8 @@ private:
 	 * so that when endpoint 1 is lagging behind endpoint 2, the full messages
 	 * can be reconstructed when the packets for endpoint 1 arrive.
 	 */
-	static constexpr int kInFlightMultiplier = 2;
+	// static constexpr int kInFlightMultiplier = 2;
+	static constexpr int kInFlightMultiplier = 4;
 	static constexpr int kBuffersPerEndpoint = kInFlightMultiplier * kSoundplaneABuffersInFlight;
 
 	using LibusbUnpacker = Unpacker<kBuffersPerEndpoint - kSoundplaneABuffersInFlight, kSoundplaneANumEndpoints>;

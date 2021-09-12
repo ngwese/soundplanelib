@@ -10,10 +10,13 @@
 // can be read by clients.
 
 #include "LibusbSoundplaneDriver.h"
+#include "ThreadUtility.h"
 
 #include <assert.h>
 #include <string.h>
 #include <unistd.h>
+
+#include <iostream>
 
 namespace
 {
@@ -37,9 +40,13 @@ public:
 			{
 				// We are OK, the data gets out normally
 				mSuccessCallback(frame);
+				mFramesHandled++;
 			}
 			else
 			{
+				std::cerr << "FRAMES HANDLED = " << mFramesHandled << "\n";
+				dumpFrameAsASCII(std::cerr, mPreviousFrame);
+				dumpFrameAsASCII(std::cerr, frame);
 				// Possible sensor glitch.  also occurs when changing carriers.
 				mGlitchCallback(mStartupCtr, df, mPreviousFrame, frame);
 				reset();
@@ -57,11 +64,13 @@ public:
 	void reset()
 	{
 		mStartupCtr = 0;
+		mFramesHandled = 0;
 	}
 
 private:
 	SensorFrame mPreviousFrame;
 	int mStartupCtr = 0;
+	unsigned int mFramesHandled = 0;
 	GlitchCallback mGlitchCallback;
 	SuccessCallback mSuccessCallback;
 };
@@ -121,6 +130,7 @@ void LibusbSoundplaneDriver::start()
 
 	// create device grab thread
 	mProcessThread = std::thread(&LibusbSoundplaneDriver::processThread, this);
+	SetPriorityRealtimeAudio(mProcessThread.native_handle());
 }
 
 int LibusbSoundplaneDriver::getDeviceState() const
