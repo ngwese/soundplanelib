@@ -64,6 +64,11 @@ class Unpacker
 		{
 			return mSize == 0;
 		}
+
+		size_t size() const
+		{
+			return mSize;
+		}
 	private:
 		size_t mSize = 0;
 		size_t mIdx = 0;
@@ -72,8 +77,9 @@ class Unpacker
 
 	static bool lessThanHandleOverflow(uint16_t a, uint16_t b)
 	{
-		// This expression is equivalent to a < b, except that it gracefully
-		// handles serial number overflows.
+		// This expression is equivalent to a < b, except that it handles serial
+		// number overflows as long as difference between a and b is less than
+		// 2^15.
 		return static_cast<uint16_t>(b - a) < (1 << (sizeof(a) * 8 - 1));
 	}
 
@@ -114,6 +120,9 @@ public:
 	 */
 	void gotTransfer(int endpoint, SoundplaneADataPacket* packets, int numPackets)
 	{
+		// FIXME: REMOVE THE FOLLOWING
+		static unsigned long lastSeqMatch = 0;
+		unsigned long matchAttempts = 0;
 		assert(numPackets != 0);
 		if (numPackets == 0) {
 			std::cerr << "Unpacker::gotTransfer() numPackets == 0\n";
@@ -123,22 +132,29 @@ public:
 		Transfer* ts[2] = { getOldestTransfer(0), getOldestTransfer(1) };
 		while (ts[0] && ts[1])
 		{
+			matchAttempts++;
 			SoundplaneADataPacket& p0 = ts[0]->currentPacket();
 			SoundplaneADataPacket& p1 = ts[1]->currentPacket();
 			if (p0.seqNum == p1.seqNum)
 			{
 				// The sequence numbers line up
+				lastSeqMatch = p0.seqNum;
 				matchedPackets(p0, p1);
 				popPacket(&ts[0]);
 				popPacket(&ts[1]);
 			}
+			else if (p0.seqNum == 0) popPacket(&ts[0]);  // Discard if no sequence number
+			else if (p1.seqNum == 0) popPacket(&ts[1]);
 			else
 			{
 				// The oldest packet we have for one endpoint is older than
 				// the oldest for the other. In this case we discard the older
 				// packet.
 				int olderTransferEndpoint = lessThanHandleOverflow(p0.seqNum, p1.seqNum) ? 0 : 1;
-				// std::cerr << "UNPACKER, dumping ep " << olderTransferEndpoint << " packets\n";
+				// int olderTransferEndpoint = p0.seqNum < p1.seqNum ? 0 : 1;
+				std::cerr << "UNPACKER, dumping ep " << olderTransferEndpoint << " depth " << matchAttempts << "\n";
+				// std::cerr << "UNPACKER buffer size: " << mTransfers[0].size() << ", " << mTransfers[1].size() << " dumping ep " << olderTransferEndpoint << "\n";
+				std::cerr << "UNPACKER p/0/1 seq: [" << lastSeqMatch << "] " << p0.seqNum << " " << p1.seqNum << "\n";
 				popPacket(&ts[olderTransferEndpoint]);
 			}
 		}

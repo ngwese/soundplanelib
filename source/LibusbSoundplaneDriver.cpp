@@ -20,6 +20,7 @@
 
 namespace
 {
+unsigned int gHandleCalls = 0; //FIXME: remove later
 
 constexpr int kInterfaceNumber = 0;
 
@@ -44,6 +45,8 @@ public:
 			}
 			else
 			{
+				std::cerr << "libusb_handle_events() calls: " << gHandleCalls << "\n";
+				gHandleCalls = 0;
 				std::cerr << "FRAMES HANDLED = " << mFramesHandled << "\n";
 				dumpFrameAsASCII(std::cerr, mPreviousFrame);
 				dumpFrameAsASCII(std::cerr, frame);
@@ -523,9 +526,11 @@ void LibusbSoundplaneDriver::processThread()
 
 		mListener.onStartup();
 
+		std::cerr << "ENTERING MAIN LOOP\n";
 		/// Run the main event loop
 		while (!processThreadShouldStopTransfers() || mOutstandingTransfers != 0) {
 			int status = libusb_handle_events(mLibusbContext);
+			gHandleCalls++;
 			if (status != LIBUSB_SUCCESS)
 			{
 				mListener.onError(status, libusb_strerror((enum libusb_error)status));
