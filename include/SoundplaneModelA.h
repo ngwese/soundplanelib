@@ -5,6 +5,8 @@
 #pragma once
 
 #include <array>
+#include <cstdint>
+
 //#include "SensorFrame.h"
 
 // Soundplane data format:

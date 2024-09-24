@@ -5,6 +5,7 @@
 #pragma once
 
 #include <array>
+#include <ostream>
 
 // TODO move to SoundplaneModelA etc.
 namespace SensorGeometry
